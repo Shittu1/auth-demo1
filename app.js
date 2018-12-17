@@ -24,6 +24,7 @@ app.set("view engine", "ejs");
 app.use(passport.initialize());
 app.use(passport.session());
 
+passport.use(new localSrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
@@ -35,27 +36,53 @@ app.get("/", (req, res) => {
     res.render("home");
 });
 
-app.get("/secret", (req, res) => {
+app.get("/secret", isLoggedIn, (req, res) => {
     res.render("secret");
 });
 
 // Show the signup form
 app.get("/register", (req, res) => {
-    res.render("register");  
+    res.render("register");
 });
 
-//Post form input values
+//Post form input values for SIGNUP
 app.post("/register", (req, res) => {
-    User.register(new User({username: req.body.username}), req.body.password, (err, user) => {
+    User.register(new User({ username: req.body.username }), req.body.password, (err, user) => {
         if (err) {
             console.log(err);
             res.render("register");
-        } 
+        }
         passport.authenticate("local")(req, res, () => {
             res.redirect("/secret");
         });
     });
 });
+
+// Show the LOGIN form
+app.get("/login", (req, res) => {
+    res.render("login");
+});
+
+//Post form input values for LOGIN
+app.post("/login",
+    // middleware
+    passport.authenticate("local", {
+        successRedirect: "/secret",
+        failureRedirect: "/login"
+    }), (req, res) => {
+    });
+
+app.get("/logout", (req, res) => {
+    req.logout();
+    res.redirect("/");
+});
+
+function isLoggedIn(req, res, next) {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect("/login");
+}
 
 app.listen(3000, () => {
     console.log("Server started..");
